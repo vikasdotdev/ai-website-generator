@@ -77,6 +77,10 @@ const PlayGround = () => {
         SendMessage(userMsg)
       } else {
         setMessages(result.data?.chatMessages || []);
+        // Also set the generated code if it exists in DB
+        if(result.data?.designCode) {
+            setGeneratedCode(result.data.designCode);
+        }
       }
     } catch (err) {
       console.error("Error fetching frame details", err);
@@ -139,10 +143,13 @@ const PlayGround = () => {
         }
       }
 
-      // -----------------------------------------------------------
-      // ✅ FIX: Manually update the UI state when generation finishes
-      // -----------------------------------------------------------
+      // 4. Clean up the final code string for saving
+      let finalDesignCode = undefined;
       if (isCode) {
+        const codeStart = aiResponse.indexOf("```html") + 7;
+        finalDesignCode = aiResponse.slice(codeStart).replace('```', '');
+        
+        // Update UI state to show completion
         setMessages((prev) => {
           const updated = [...prev];
           updated[updated.length - 1].content = "Design Created! ✅";
@@ -150,11 +157,11 @@ const PlayGround = () => {
         });
       }
 
-      // 4. Final Save to Database
-      // Using the fixed /api/frames route and saving the correct final message
+      // 5. Final Save to Database
       await axios.put('/api/frames', { 
         messages: [...messages, userMessage, { role: 'assistant', content: isCode ? "Design Created! ✅" : aiResponse }],
-        frameId: frameId
+        frameId: frameId,
+        designCode: finalDesignCode // ✅ Sending the code to the backend
       });
 
     } catch (error) {

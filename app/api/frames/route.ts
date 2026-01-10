@@ -28,29 +28,27 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(finalResult);
 }
 
-// ✅ THIS IS THE MISSING FUNCTION YOU NEED TO ADD
+// ✅ UPDATED PUT FUNCTION TO SAVE DESIGN CODE
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, frameId } = body;
+    const { messages, frameId, designCode } = body; // ✅ Destructure designCode
 
     if (!frameId || !messages) {
       return NextResponse.json({ error: "Frame ID and messages are required" }, { status: 400 });
     }
 
-    // Check if a chat entry already exists for this frame
+    // 1. Update Chat History
     //@ts-ignore
     const existingChat = await db.select().from(chatTable).where(eq(chatTable.frameId, frameId));
 
     if (existingChat.length > 0) {
-      // UPDATE existing chat history
       await db.update(chatTable)
         //@ts-ignore
-        .set({ chatMessage: messages }) // Assuming your column name is 'chatMessage' based on your GET logic
+        .set({ chatMessage: messages })
         //@ts-ignore
         .where(eq(chatTable.frameId, frameId));
     } else {
-      // INSERT new chat history if it doesn't exist
       await db.insert(chatTable).values({
         //@ts-ignore
         frameId: frameId,
@@ -59,7 +57,16 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ message: "Chat updated successfully" });
+    // 2. ✅ Update Generated Code in frameTable if it exists
+    if (designCode) {
+      await db.update(frameTable)
+        //@ts-ignore
+        .set({ designCode: designCode })
+        //@ts-ignore
+        .where(eq(frameTable.frameId, frameId));
+    }
+
+    return NextResponse.json({ message: "Chat and Design updated successfully" });
 
   } catch (error) {
     console.error("Error updating chat:", error);
