@@ -123,7 +123,7 @@ const PlayGround = () => {
           const currentCode = aiResponse.slice(codeStart).replace('```', '');
           setGeneratedCode(currentCode);
           
-          // Update chat bubble to show status
+          // Update chat bubble to show status during generation
           setMessages((prev) => {
             const updated = [...prev];
             updated[updated.length - 1].content = "Generating HTML Design...";
@@ -139,9 +139,21 @@ const PlayGround = () => {
         }
       }
 
-      // 4. Final Save to Database once streaming is finished
-      await axios.put('/api/users', { // Note: Verify if your PUT route is /api/users or /api/chat-history
-        messages: [...messages, userMessage, { role: 'assistant', content: isCode ? "Design Completed!" : aiResponse }],
+      // -----------------------------------------------------------
+      // ✅ FIX: Manually update the UI state when generation finishes
+      // -----------------------------------------------------------
+      if (isCode) {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = "Design Created! ✅";
+          return updated;
+        });
+      }
+
+      // 4. Final Save to Database
+      // Using the fixed /api/frames route and saving the correct final message
+      await axios.put('/api/frames', { 
+        messages: [...messages, userMessage, { role: 'assistant', content: isCode ? "Design Created! ✅" : aiResponse }],
         frameId: frameId
       });
 
