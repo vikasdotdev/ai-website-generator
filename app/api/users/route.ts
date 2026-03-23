@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const email = clerkUser.primaryEmailAddress.emailAddress;
     const name = clerkUser.fullName ?? "NA";
-    const defaultCredits = 2;
+    const defaultCredits = 5;
 
     // Try to find existing user and select the full row (id, credits, etc.)
     const existingRows = await db

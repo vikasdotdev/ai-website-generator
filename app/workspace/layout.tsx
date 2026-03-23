@@ -9,7 +9,6 @@ const WorkspaceLayout = ({ children }: { children: React.ReactNode }) => {
     <SidebarProvider>
       <AppSidebar />
       <div className='w-full'>
-        <AppSidebar />
         <AppHeader />
         {children}
         <Toaster/>

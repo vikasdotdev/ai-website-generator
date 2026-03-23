@@ -1,10 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import { currentUser } from "@clerk/nextjs/server";
+import { db } from "@/config/db";
+import { usersTable } from "@/config/schema";
+import { eq, sql } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
     try {
         const { messages } = await req.json();
 
+        // 1. Authenticate user and check credits
+        const clerkUser = await currentUser();
+        if (!clerkUser || !clerkUser.primaryEmailAddress?.emailAddress) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const email = clerkUser.primaryEmailAddress.emailAddress;
+
+        // Fetch user from DB
+        const userRows = await db
+            .select()
+            .from(usersTable)
+            .where(eq(usersTable.email, email));
+
+        if (!userRows || userRows.length === 0) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
+
+        const user = userRows[0];
+
+        // 2. Validate credits
+        if ((user.credits ?? 0) <= 0) {
+            return NextResponse.json({ error: "Not enough credits" }, { status: 403 });
+        }
+
+        // 3. Deduct 1 credit
+        await db
+            .update(usersTable)
+            .set({ credits: sql`${usersTable.credits} - 1` })
+            .where(eq(usersTable.email, email));
+
+        // 4. Proceed with AI generation
         const response = await axios.post(
             "https://openrouter.ai/api/v1/chat/completions",
             {
